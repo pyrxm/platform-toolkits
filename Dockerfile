@@ -93,7 +93,6 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
 # Final image
 FROM scratch AS network_toolkit
 ARG USERNAME
-ARG NON_ROOT
 COPY --from=network_toolkit_build / /
 
 USER ${USERNAME}
@@ -103,12 +102,41 @@ CMD ["/bin/pause"]
 # -------
 # PLATFORM TOOLKIT
 # -------
-FROM alpine:${ALPINE_VERSION} AS platform_toolkit
+# Platform Toolkit Builder
+FROM alpine:${ALPINE_VERSION} AS platform_toolkit_build
 ARG USERNAME
 
 COPY --from=base_image / /
 
+
+# Final image
+FROM scratch AS platform_toolkit
+ARG USERNAME
+COPY --from=platform_toolkit_build / /
+
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
+CMD ["/bin/pause"]
 
+# -------
+# DATA TOOLKIT
+# -------
+# Data Toolkit Builder
+FROM alpine:${ALPINE_VERSION} AS data_toolkit_build
+
+COPY --from=base_image / /
+
+RUN apk update --no-cache && \
+    apk add --no-cache \
+        curl \
+        redis \
+        postgresql-client
+
+# Final image
+FROM scratch AS data_toolkit
+ARG USERNAME
+COPY --from=data_toolkit_build / /
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
 CMD ["/bin/pause"]

@@ -23,6 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
+          - data
           - network
           - platform
     steps:
@@ -58,6 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
+          - data
           - network
           - platform
     steps:
