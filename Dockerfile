@@ -116,7 +116,7 @@ ARG USERNAME
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-CMD ["/bin/pause"]
+CMD ["/bin/microsocks"]
 
 # -------
 # PLATFORM TOOLKIT
