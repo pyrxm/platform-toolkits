@@ -6,10 +6,17 @@ ARG USERNAME="engineer"
 # -------
 # BASE IMAGE
 # -------
+#
+# Dependencies
+FROM registry.k8s.io/pause:3.10 AS dep_base_image
+
+# Base image builder
 FROM alpine:${ALPINE_VERSION} AS base_image
 ARG DEFAULT_SHELL
 ARG USERNAME
 ARG NON_ROOT
+
+COPY --from=dep_base_image /pause /bin/pause
 
 RUN apk update --no-cache && \
     apk add --no-cache \
@@ -83,8 +90,6 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
         echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
     fi
 
-CMD [ ${DEFAULT_SHELL} ]
-
 # Final image
 FROM scratch as network_toolkit
 ARG USERNAME
@@ -93,6 +98,7 @@ COPY --from=network_toolkit_build / /
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
+CMD ["/bin/pause"]
 
 # -------
 # PLATFORM TOOLKIT
@@ -105,4 +111,4 @@ COPY --from=base_image / /
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
-CMD ["sleep", "infinity"]
+CMD ["/bin/pause"]
