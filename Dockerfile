@@ -160,10 +160,8 @@ RUN apk update --no-cache && \
     apk add --no-cache \
         bash \
         bind-tools \
-        binutils \
         curl \
         git \
-        libstdc++ \
         net-tools \
         netcat-openbsd \
         sudo \
@@ -173,8 +171,6 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
         # Yes, I know... bad practice
         echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
     fi
-
-    #
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
