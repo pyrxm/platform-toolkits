@@ -33,9 +33,6 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
         ln -s "${HOME}" /home/${USERNAME}; \
     fi
 
-# USER ${USERNAME}
-# WORKDIR /home/${USERNAME}
-
 # RUN if [ "${DEFAULT_SHELL}" = "zsh" ] ; then \
 #         sh -c "$(wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)" ; \
 #     fi
@@ -49,7 +46,6 @@ FROM ghcr.io/httptoolkit/docker-socks-tunnel AS dep_network_toolkit_microsocks
 
 # Network Toolkit Builder
 FROM alpine:${ALPINE_VERSION} AS network_toolkit_build
-ARG DEFAULT_SHELL
 ARG USERNAME
 ARG NON_ROOT
 
@@ -100,6 +96,29 @@ WORKDIR /home/${USERNAME}
 CMD ["/bin/pause"]
 
 # -------
+# PROXY TOOLKIT
+# -------
+# Proxy Toolkit Builder
+FROM alpine:${ALPINE_VERSION} AS proxy_toolkit_build
+
+COPY --from=base_image / /
+COPY --from=dep_network_toolkit_microsocks /usr/local/bin/microsocks /bin/microsocks
+
+# TODO: investigate how to add mitmproxy
+RUN apk update --no-cache && \
+    apk add --no-cache \
+        python3
+
+# Final image
+FROM scratch AS proxy_toolkit
+COPY --from=proxy_toolkit_build / /
+ARG USERNAME
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+CMD ["/bin/pause"]
+
+# -------
 # PLATFORM TOOLKIT
 # -------
 # Platform Toolkit Builder
@@ -108,6 +127,12 @@ ARG USERNAME
 
 COPY --from=base_image / /
 
+RUN apk update --no-cache && \
+    apk add --no-cache \
+        bind-tools \
+        curl \
+        net-tools \
+        netcat-openbsd
 
 # Final image
 FROM scratch AS platform_toolkit
@@ -123,14 +148,17 @@ CMD ["/bin/pause"]
 # -------
 # Data Toolkit Builder
 FROM alpine:${ALPINE_VERSION} AS data_toolkit_build
-
 COPY --from=base_image / /
 
 RUN apk update --no-cache && \
     apk add --no-cache \
+        bind-tools \
         curl \
-        redis \
-        postgresql-client
+        mysql-client \
+        net-tools \
+        netcat-openbsd \
+        postgresql-client \
+        redis
 
 # Final image
 FROM scratch AS data_toolkit
