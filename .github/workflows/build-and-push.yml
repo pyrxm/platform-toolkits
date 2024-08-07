@@ -1,0 +1,86 @@
+---
+
+name: Container Image Build and Push - CI Workflow
+
+'on':
+  workflow_run:
+    workflows: ["Scheduled scan of container images for vulnerabilities"]
+    types:
+      - completed
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  scan:
+    name: trivy scan
+    runs-on: ubuntu-latest
+    if: github.ref_name != 'main'
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - network
+          - platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build container image
+        run: |
+          docker build \
+            --target "${{ matrix.target }}_toolkit" \
+            -t localhost/${{ github.repository_owner }}/ptk-${{ matrix.target }}-toolkit:${{ github.sha }} .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: localhost/${{ github.repository_owner }}/ptk-${{ matrix.target }}-toolkit:${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  build-and-push-image:
+    name: build and push multi-arch container image
+    runs-on: ubuntu-latest
+    if: github.event.ref == 'refs/heads/main' || github.event.workflow_run.conclusion == 'failure'
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - network
+          - platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push container image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          target: "${{ matrix.target }}_toolkit"
+          tags: ghcr.io/${{ github.repository_owner }}/ptk-${{ matrix.target }}-toolkit:${{ github.sha }},ghcr.io/${{ github.repository_owner }}/ptk-${{ matrix.target }}-toolkit:latest

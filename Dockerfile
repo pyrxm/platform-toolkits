@@ -91,7 +91,7 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
     fi
 
 # Final image
-FROM scratch as network_toolkit
+FROM scratch AS network_toolkit
 ARG USERNAME
 ARG NON_ROOT
 COPY --from=network_toolkit_build / /
