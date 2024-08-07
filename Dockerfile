@@ -2,13 +2,14 @@ ARG ALPINE_VERSION="3.20"
 ARG DEFAULT_SHELL="zsh"
 ARG NON_ROOT=true
 ARG USERNAME="engineer"
+ARG MICROSOCKS_VERSION="98421a21c4adc4c77c0cf3a5d650cc28ad3e0107" # use "master" for latest
 
 # -------
 # BASE IMAGE
 # -------
 #
 # Dependencies
-FROM registry.k8s.io/pause:3.10 AS dep_base_image
+FROM registry.k8s.io/pause:3.10 AS dep_base_image_pause
 
 # Base image builder
 FROM alpine:${ALPINE_VERSION} AS base_image
@@ -16,7 +17,7 @@ ARG DEFAULT_SHELL
 ARG USERNAME
 ARG NON_ROOT
 
-COPY --from=dep_base_image /pause /bin/pause
+COPY --from=dep_base_image_pause /pause /bin/pause
 
 RUN apk update --no-cache && \
     apk add --no-cache \
@@ -42,7 +43,25 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
 # -------
 #
 # Dependencies
-FROM ghcr.io/httptoolkit/docker-socks-tunnel AS dep_network_toolkit_microsocks
+FROM alpine:${ALPINE_VERSION} AS dep_network_toolkit_microsocks
+ARG MICROSOCKS_VERSION
+
+WORKDIR /tmp
+ADD https://github.com/rofl0r/microsocks/archive/${MICROSOCKS_VERSION}.tar.gz /tmp/microsocks.tar.gz
+
+RUN \
+  echo "Installing build dependencies..." && \
+  apk add --update --no-cache \
+    git \
+    build-base \
+    tar && \
+  echo "Building MicroSocks..." && \
+    tar -xvf microsocks.tar.gz --strip 1 && \
+    make && \
+    chmod +x /tmp/microsocks && \
+    mkdir -p /tmp/microsocks-bin && \
+    cp -v /tmp/microsocks /tmp/microsocks-bin && \
+    mv /tmp/microsocks-bin/microsocks /usr/local/bin/microsocks
 
 # Network Toolkit Builder
 FROM alpine:${ALPINE_VERSION} AS network_toolkit_build
@@ -114,9 +133,11 @@ FROM scratch AS proxy_toolkit
 COPY --from=proxy_toolkit_build / /
 ARG USERNAME
 
+EXPOSE 1080
+
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-CMD ["/bin/pause"]
+CMD ["/bin/microsocks"]
 
 # -------
 # PLATFORM TOOLKIT
