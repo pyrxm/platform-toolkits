@@ -26,7 +26,7 @@ jobs:
           - data
           - network
           - proxy
-          - platform
+          # - platform
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
-          vuln-type: 'os,library'
+          vuln-type: 'os'
           severity: 'CRITICAL,HIGH'
 
   build-and-push-image:

@@ -4,10 +4,12 @@ ARG NON_ROOT=true
 ARG USERNAME="engineer"
 ARG MICROSOCKS_VERSION="98421a21c4adc4c77c0cf3a5d650cc28ad3e0107" # use "master" for latest
 
-# -------
+
+
+## -------
 # BASE IMAGE
-# -------
-#
+## -------
+
 # Dependencies
 FROM registry.k8s.io/pause:3.10 AS dep_base_image_pause
 
@@ -34,14 +36,12 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
         ln -s "${HOME}" /home/${USERNAME}; \
     fi
 
-# RUN if [ "${DEFAULT_SHELL}" = "zsh" ] ; then \
-#         sh -c "$(wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)" ; \
-#     fi
 
-# -------
+
+## -------
 # NETWORK TOOLKIT
-# -------
-#
+## -------
+
 # Dependencies
 FROM alpine:${ALPINE_VERSION} AS dep_network_toolkit_microsocks
 ARG MICROSOCKS_VERSION
@@ -114,9 +114,12 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 CMD ["/bin/pause"]
 
-# -------
+
+
+## -------
 # PROXY TOOLKIT
-# -------
+## -------
+
 # Proxy Toolkit Builder
 FROM alpine:${ALPINE_VERSION} AS proxy_toolkit_build
 
@@ -139,34 +142,71 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 CMD ["/bin/microsocks"]
 
-# -------
+
+
+## -------
 # PLATFORM TOOLKIT
-# -------
+## -------
+
 # Platform Toolkit Builder
 FROM alpine:${ALPINE_VERSION} AS platform_toolkit_build
+ARG DEFAULT_SHELL
 ARG USERNAME
+ARG NON_ROOT
 
 COPY --from=base_image / /
 
 RUN apk update --no-cache && \
     apk add --no-cache \
+        bash \
         bind-tools \
         curl \
+        git \
         net-tools \
-        netcat-openbsd
+        netcat-openbsd \
+        sudo \
+        xz
+
+RUN if [ "${NON_ROOT}" = "true" ] ; then \
+        # Yes, I know... bad practice
+        echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
+    fi
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+
+RUN curl -fsSL https://get.jetify.com/devbox | bash -s -- -f && \
+    curl -fsSL https://nixos.org/nix/install | bash -s -- --no-daemon
+
+RUN git clone https://github.com/asdf-vm/asdf.git "${HOME}/.asdf"
+
+RUN if [ "${DEFAULT_SHELL}" = "zsh" ] ; then \
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" ; \
+        sed -i 's/plugins=(git)/plugins=(asdf git)/' "${HOME}/.zshrc" ; \
+        echo 'export PATH=$HOME/.nix-profile/bin:$HOME/.devbox/nix/profile/default/bin:$PATH' >> "${HOME}/.zshrc" ; \
+    else \
+        echo 'export ASDF_DIR="$HOME/.asdf"' >> "${HOME}/.profile" ; \
+        echo '. "$ASDF_DIR/asdf.sh"' >> "${HOME}/.profile" ; \
+        echo 'export PATH=$HOME/.nix-profile/bin:$HOME/.devbox/nix/profile/default/bin:$PATH' >> "${HOME}/.profile" ; \
+    fi
 
 # Final image
 FROM scratch AS platform_toolkit
 ARG USERNAME
 COPY --from=platform_toolkit_build / /
+COPY entrypoint/platform.sh /entrypoint.sh
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
+ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["/bin/pause"]
 
-# -------
+
+
+## -------
 # DATA TOOLKIT
-# -------
+## -------
+
 # Data Toolkit Builder
 FROM alpine:${ALPINE_VERSION} AS data_toolkit_build
 COPY --from=base_image / /
