@@ -1,7 +1,9 @@
 #!/bin/sh
 
-[ -f "/tmp/devbox.json" ] && ln -s /tmp/devbox.json "${HOME}/devbox.json"
-[ -f "/tmp/.tool-versions" ] && ln -s /tmp/.tool-versions "${HOME}/.tool-versions"
+PTK_CONFIG="${PLATFORM_TOOLKIT_CONFIG_PATH:-/tmp}"
+
+[ -f "${PTK_CONFIG}/devbox.json" ] && ln -s "${PTK_CONFIG}/devbox.json" "${HOME}/devbox.json"
+[ -f "${PTK_CONFIG}/.tool-versions" ] && ln -s "${PTK_CONFIG}/.tool-versions" "${HOME}/.tool-versions"
 
 if [ -f "${HOME}/devbox.json" ] ; then
     if [ "$(command -v devbox || true)" != "" ] ; then
