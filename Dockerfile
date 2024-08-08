@@ -194,9 +194,11 @@ RUN if [ "${DEFAULT_SHELL}" = "zsh" ] ; then \
 FROM scratch AS platform_toolkit
 ARG USERNAME
 COPY --from=platform_toolkit_build / /
+COPY entrypoint/platform.sh /entrypoint.sh
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
+ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["/bin/pause"]
 
 
