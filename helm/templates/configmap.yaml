@@ -1,0 +1,17 @@
+{{- if and (eq .Values.toolkit.name "platform") (.Values.config.platform) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-platform" (include "helm.name" .) }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+data:
+  {{- if .Values.config.platform.tool_versions }}
+  .tool-versions: |
+      {{- .Values.config.platform.tool_versions | nindent 4 }}
+  {{- end }}
+  {{- if .Values.config.platform.devbox_json }}
+  devbox.json: |
+      {{- .Values.config.platform.devbox_json | nindent 4 }}
+  {{- end }}
+{{- end}}

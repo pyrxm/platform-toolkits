@@ -97,3 +97,23 @@ jobs:
           subject-name: ghcr.io/${{ github.repository_owner }}/ptk-${{ matrix.target }}-toolkit
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+  helm_push:
+    name: push helm chart
+    runs-on: ubuntu-latest
+    if: github.event.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: Push Helm chart to GitHub Registry
+        uses: bsord/helm-push@4
+        with:
+          useOCIRegistry: true
+          registry-url:  oci://ghcr.io/${{ github.repository_owner }}/platform-toolkit
+          username: ${{ github.actor }}
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          force: true
+          chart-folder: helm
