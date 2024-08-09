@@ -21,6 +21,10 @@ image:
   prefix: ptk-
   suffix: -toolkit
 
+exec:
+  command: ["/bin/pause"]
+  args: []
+
 imagePullSecrets: []
 nameOverride: ""
 
