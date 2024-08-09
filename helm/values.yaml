@@ -24,9 +24,15 @@ image:
 exec:
   command: ["/bin/pause"]
   args: []
+## For "platform" toolkit, try:
+  # command: ["/entrypoint.sh"]
+  # args: ["/bin/pause"]
+
 
 imagePullSecrets: []
 nameOverride: ""
+
+replicaCount: 1
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -41,7 +47,6 @@ serviceAccount:
 
 annotations: {}
 labels: {}
-
 
 podSecurityContext: {}
   # fsGroup: 2000
