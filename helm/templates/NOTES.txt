@@ -1,1 +1,7 @@
-Pod name: {{ include "helm.name" . }}
+===============================================================================
+Pod names:
+{{- $podPrefix := (include "helm.name" .) }}
+{{- range $i := (untilStep 0 (int .Values.replicaCount) 1) }}
+{{ printf " - %s-%d" $podPrefix (int $i) }}
+{{- end }}
+===============================================================================

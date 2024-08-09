@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "helm.name" . }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  serviceName: {{ include "helm.name" . }}
+  selector:
+    matchLabels:
+      {{- include "helm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "helm.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helm.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.toolkit.name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "helm.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.exec.command | nindent 12 }}
+          args:
+            {{- toYaml .Values.exec.args | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- if and (eq .Values.toolkit.name "platform") (.Values.config.platform) }}
+          env:
+            - name: PLATFORM_TOOLKIT_CONFIG_PATH
+              value: "{{ .Values.config.mountPath }}"
+          volumeMounts:
+            - name: config-volume
+              mountPath: {{ .Values.config.mountPath }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ printf "%s-platform" (include "helm.name" .) }}
+        {{- end -}}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
