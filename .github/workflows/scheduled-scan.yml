@@ -4,7 +4,7 @@ name: Scheduled scan of container images for vulnerabilities
 
 'on':
   schedule:
-    - cron: 0 16 * * 5
+    - cron: 12 16 * * 5
   workflow_dispatch:
 
 jobs:
