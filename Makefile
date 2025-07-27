@@ -1,42 +1,64 @@
-DOCKER_INTERNAL_REG=localhost:5000
+INTERNAL_REG=localhost:5000
+IMAGE_BUILDER=podman
 
-DOCKER_IMAGE_BASE=ptk-base
-DOCKER_IMAGE_NETWORK_TOOLKIT=ptk-network-toolkit
-DOCKER_IMAGE_PROXY_TOOLKIT=ptk-proxy-toolkit
-DOCKER_IMAGE_PLATFORM_TOOLKIT=ptk-platform-toolkit
-DOCKER_IMAGE_DATA_TOOLKIT=ptk-data-toolkit
+IMAGE_BASE=ptk-base
+IMAGE_NETWORK_TOOLKIT=ptk-network-toolkit
+IMAGE_PROXY_TOOLKIT=ptk-proxy-toolkit
+IMAGE_PLATFORM_TOOLKIT=ptk-platform-toolkit
+IMAGE_DATA_TOOLKIT=ptk-data-toolkit
 
-DOCKER_INTERNAL_TAG := $(shell git rev-parse --short HEAD)
+INTERNAL_TAG := $(shell git rev-parse --short HEAD)
 
 .PHONY: images
 images: image-base image-network image-proxy image-platform image-data
 
 .PHONY: image-base
 image-base:
-	DOCKER_BUILDKIT=1 docker build \
+	$(IMAGE_BUILDER) build \
 		--target base_image \
-		-t $(DOCKER_INTERNAL_REG)/$(DOCKER_IMAGE_BASE):$(DOCKER_INTERNAL_TAG) .
+		-t $(INTERNAL_REG)/$(IMAGE_BASE):$(INTERNAL_TAG) .
+
+.PHONY: run-base
+run-base:
+	image-base && \
+	$(IMAGE_BUILDER) run --rm -it $(INTERNAL_REG)/$(IMAGE_BASE):$(INTERNAL_TAG) zsh
 
 .PHONY: image-network
 image-network:
-	DOCKER_BUILDKIT=1 docker build \
+	$(IMAGE_BUILDER) build \
 		--target network_toolkit \
-		-t $(DOCKER_INTERNAL_REG)/$(DOCKER_IMAGE_NETWORK_TOOLKIT):$(DOCKER_INTERNAL_TAG) .
+		-t $(INTERNAL_REG)/$(IMAGE_NETWORK_TOOLKIT):$(INTERNAL_TAG) .
+
+.PHONY: run-network
+run-network: image-network
+	$(IMAGE_BUILDER) run --rm -it $(INTERNAL_REG)/$(IMAGE_NETWORK_TOOLKIT):$(INTERNAL_TAG) zsh
 
 .PHONY: image-proxy
 image-proxy:
-	DOCKER_BUILDKIT=1 docker build \
+	$(IMAGE_BUILDER) build \
 		--target proxy_toolkit \
-		-t $(DOCKER_INTERNAL_REG)/$(DOCKER_IMAGE_PROXY_TOOLKIT):$(DOCKER_INTERNAL_TAG) .
+		-t $(INTERNAL_REG)/$(IMAGE_PROXY_TOOLKIT):$(INTERNAL_TAG) .
+
+.PHONY: run-proxy
+run-proxy: image-proxy
+	$(IMAGE_BUILDER) run --rm -it $(INTERNAL_REG)/$(IMAGE_PROXY_TOOLKIT):$(INTERNAL_TAG) zsh
 
 .PHONY: image-platform
 image-platform:
-	DOCKER_BUILDKIT=1 docker build \
+	$(IMAGE_BUILDER) build \
 		--target platform_toolkit \
-		-t $(DOCKER_INTERNAL_REG)/$(DOCKER_IMAGE_PLATFORM_TOOLKIT):$(DOCKER_INTERNAL_TAG) .
+		-t $(INTERNAL_REG)/$(IMAGE_PLATFORM_TOOLKIT):$(INTERNAL_TAG) .
+
+.PHONY: run-platform
+run-platform: image-platform
+	$(IMAGE_BUILDER) run --rm -it $(INTERNAL_REG)/$(IMAGE_PLATFORM_TOOLKIT):$(INTERNAL_TAG) zsh
 
 .PHONY: image-data
 image-data:
-	DOCKER_BUILDKIT=1 docker build \
+	$(IMAGE_BUILDER) build \
 		--target data_toolkit \
-		-t $(DOCKER_INTERNAL_REG)/$(DOCKER_IMAGE_DATA_TOOLKIT):$(DOCKER_INTERNAL_TAG) .
+		-t $(INTERNAL_REG)/$(IMAGE_DATA_TOOLKIT):$(INTERNAL_TAG) .
+
+.PHONY: run-data
+run-data: image-data
+	$(IMAGE_BUILDER) run --rm -it $(INTERNAL_REG)/$(IMAGE_DATA_TOOLKIT):$(INTERNAL_TAG) zsh
