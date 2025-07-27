@@ -1,4 +1,5 @@
 ARG ALPINE_VERSION="3.22"
+ARG GOLANG_VERSION="1.24"
 ARG DEFAULT_SHELL="zsh"
 ARG NON_ROOT=true
 ARG USERNAME="engineer"
@@ -148,6 +149,23 @@ CMD ["/bin/microsocks"]
 # PLATFORM TOOLKIT
 ## -------
 
+# Dependencies
+FROM golang:${GOLANG_VERSION}-alpine AS dep_platform_toolkit_asdf
+ENV GOPATH="/go"
+
+RUN test -d /go || mkdir /go
+RUN apk update --no-cache && \
+    apk add --no-cache \
+        bash \
+        git
+
+RUN git clone https://github.com/asdf-vm/asdf.git /tmp/asdf
+
+WORKDIR /tmp/asdf
+
+RUN go install github.com/asdf-vm/asdf/cmd/asdf@$(git ls-remote --tags --sort=committerdate | grep -o 'v.*' | tail -1)
+
+
 # Platform Toolkit Builder
 FROM alpine:${ALPINE_VERSION} AS platform_toolkit_build
 ARG DEFAULT_SHELL
@@ -155,21 +173,25 @@ ARG USERNAME
 ARG NON_ROOT
 
 COPY --from=base_image / /
+COPY --from=dep_platform_toolkit_asdf /go/bin/asdf /usr/bin/asdf
 
 RUN apk update --no-cache && \
     apk add --no-cache \
         bash \
         bind-tools \
+        coreutils \
         curl \
         git \
         net-tools \
         netcat-openbsd \
         sudo \
+        shadow \
         xz
 
 RUN if [ "${NON_ROOT}" = "true" ] ; then \
         # Yes, I know... bad practice
         echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
+        install -d -m755 -o 1000 -g 1000 /nix ; \
     fi
 
 USER ${USERNAME}
@@ -177,8 +199,6 @@ WORKDIR /home/${USERNAME}
 
 RUN curl -fsSL https://get.jetify.com/devbox | bash -s -- -f && \
     curl -fsSL https://nixos.org/nix/install | bash -s -- --no-daemon
-
-RUN git clone https://github.com/asdf-vm/asdf.git "${HOME}/.asdf"
 
 RUN if [ "${DEFAULT_SHELL}" = "zsh" ] ; then \
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" ; \
