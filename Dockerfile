@@ -64,6 +64,9 @@ RUN \
     cp -v /tmp/microsocks /tmp/microsocks-bin && \
     mv /tmp/microsocks-bin/microsocks /usr/local/bin/microsocks
 
+FROM ghcr.io/natesales/q:latest AS dep_network_toolkit_q
+ARG USERNAME
+
 # Network Toolkit Builder
 FROM alpine:${ALPINE_VERSION} AS network_toolkit_build
 ARG USERNAME
@@ -71,6 +74,7 @@ ARG NON_ROOT
 
 COPY --from=base_image / /
 COPY --from=dep_network_toolkit_microsocks /usr/local/bin/microsocks /bin/microsocks
+COPY --from=dep_network_toolkit_q /usr/bin/q /bin/q
 
 RUN apk update --no-cache && \
     apk add --no-cache \
@@ -80,6 +84,7 @@ RUN apk update --no-cache && \
         busybox-extras \
         curl \
         ethtool \
+        gping \
         iperf3 \
         iproute2 \
         iputils \
@@ -99,7 +104,8 @@ RUN apk update --no-cache && \
         tcpdump \
         tcptraceroute \
         tshark \
-        wget
+        wget \
+        xh
 
 RUN if [ "${NON_ROOT}" = "true" ] ; then \
         # Yes, I know... bad practice
