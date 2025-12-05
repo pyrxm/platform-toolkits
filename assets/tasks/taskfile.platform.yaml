@@ -1,0 +1,139 @@
+version: "3"
+
+vars:
+  LOCAL_BIN_DIR: "${HOME}/.local/bin"
+
+tasks:
+  ##
+  # External tasks
+  ##
+  default:
+    desc: List all tasks
+    silent: true
+    cmds:
+      - task --list-all
+
+  build-utils:
+    desc: Build platform toolkit required utils
+    vars:
+      REQUIRED_TOOLS:
+        - sudo
+        - bash
+        - curl
+        - git
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
+    cmds:
+      - task: ensure-local-bin
+      - task: ensure-mise
+      - task: ensure-chezmoi
+      - task: ensure-devbox
+
+  build-env:
+    desc: Build platform toolkit environment
+    deps:
+      - task: ensure-run-mise-env
+      - task: ensure-run-devbox-env
+      - task: ensure-run-chezmoi-env
+  ##
+  # Internal tasks
+  ##
+  check-required-tool:
+    internal: true
+    cmds:
+      - cmd: |
+          PRE_CHECK_TOOLS_FAILED=0
+          if [ "$(command -v {{.TOOL}} || true)" == "" ] ; then
+            echo "ERROR: Missing dependency. Please install '{{.TOOL}}' and add it to your PATH."
+            PRE_CHECK_TOOLS_FAILED=1
+          fi
+          if [ $PRE_CHECK_TOOLS_FAILED -eq 1 ] ; then
+            exit 1
+          fi
+
+  ensure-local-bin:
+    internal: true
+    cmds:
+      - cmd: mkdir -p {{.LOCAL_BIN_DIR}}
+      - cmd: echo 'PATH="{{.LOCAL_BIN_DIR}}:${PATH}"' > ${HOME}/.profile
+    status:
+      - test -d {{.LOCAL_BIN_DIR}}
+
+  ensure-mise:
+    internal: true
+    cmds:
+      - cmd: curl https://mise.run | MISE_INSTALL_PATH={{.LOCAL_BIN_DIR}}/mise sh
+      - cmd: echo 'eval "$(~/.local/bin/mise activate)"' > .profile
+    status:
+      - test -f {{.LOCAL_BIN_DIR}}/mise
+
+  ensure-devbox:
+    internal: true
+    cmds:
+      - cmd: curl -fsSL https://get.jetify.com/devbox | bash -s -- -f
+      - cmd: curl -fsSL https://nixos.org/nix/install | bash -s -- --no-daemon
+    status:
+      - command -v devbox
+
+  ensure-chezmoi:
+    internal: true
+    cmds:
+      - cmd: mise use --global chezmoi@latest
+    status:
+      - command -v chezmoi
+
+  ensure-run-devbox-env:
+    internal: true
+    vars:
+      REQUIRED_TOOLS:
+        - devbox
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
+    cmds:
+      - cmd: |
+          PATH="${HOME}/.nix-profile/bin:${HOME}/.devbox/nix/profile/default/bin:${PATH}"
+          devbox install
+    status:
+      - sh -c "[ ! -f \"${HOME}/devbox.json\" ]"
+
+  ensure-run-mise-env:
+    internal: true
+    vars:
+      REQUIRED_TOOLS:
+        - mise
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
+    cmds:
+      - cmd: mise install
+    status:
+      - sh -c "[ ! -f \"${HOME}/.config/mise.toml\" ] && [ ! -f \"${HOME}/.tool-versions\" ]"
+
+  ensure-run-chezmoi-env:
+    internal: true
+    vars:
+      REQUIRED_TOOLS:
+        - chezmoi
+        - git
+        - ssh
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
+    cmds:
+      - cmd: chezmoi init --apply "${PLATFORM_TOOLKIT_CHEZMOI_REPO}"
+    status:
+      - sh -c "[ -z \"${PLATFORM_TOOLKIT_CHEZMOI_REPO}\" ]"
