@@ -1,4 +1,5 @@
 ARG ALPINE_VERSION="3.23"
+ARG FEDORA_VERSION="43"
 ARG GOLANG_VERSION="1.25"
 ARG DEFAULT_SHELL="zsh"
 ARG NON_ROOT=true
@@ -38,6 +39,26 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
     ln -s "${HOME}" /home/${USERNAME}; \
     fi
 
+FROM fedora:${FEDORA_VERSION} AS base_image_fedora
+ARG DEFAULT_SHELL
+ARG USERNAME
+ARG NON_ROOT
+
+COPY --from=dep_base_image_pause /pause /bin/pause
+
+RUN dnf update -y && \
+    dnf install -y \
+    git \
+    curl \
+    ${DEFAULT_SHELL} && \
+    dnf clean all && \
+    chmod 0640 /etc/shadow # PAM gets cranky otherwise
+
+RUN if [ "${NON_ROOT}" = "true" ] ; then \
+    useradd -m ${USERNAME} -s "$(command -v ${DEFAULT_SHELL})" ; \
+    else \
+    ln -s "${HOME}" /home/${USERNAME}; \
+    fi
 
 
 ## -------
@@ -156,64 +177,31 @@ CMD ["/bin/microsocks"]
 # PLATFORM TOOLKIT
 ## -------
 
-# Dependencies
-FROM alpine:${ALPINE_VERSION} AS dep_platform_toolkit_taskfile
-
-RUN apk update --no-cache && \
-    apk add --no-cache curl
-
-RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/bin
-
-
 # Platform Toolkit Builder
-FROM alpine:${ALPINE_VERSION} AS platform_toolkit_build
+FROM fedora:${FEDORA_VERSION} AS platform_toolkit
 ARG DEFAULT_SHELL
 ARG USERNAME
 ARG NON_ROOT
 ARG LOCAL_BIN_DIR
 
-COPY --from=base_image / /
-COPY --from=dep_platform_toolkit_taskfile /usr/bin/task /usr/bin/task
-
-RUN apk update --no-cache && \
-    apk add --no-cache \
-    bash \
-    bind-tools \
-    coreutils \
-    curl \
-    git \
-    net-tools \
-    netcat-openbsd \
-    openssh-client \
-    sudo \
-    shadow \
-    xz
+COPY --from=base_image_fedora / /
 
 RUN if [ "${NON_ROOT}" = "true" ] ; then \
     # Yes, I know... bad practice
     echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
-    install -d -m755 -o 1000 -g 1000 /nix ; \
     fi
+
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/bin
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 ENV PATH="${LOCAL_BIN_DIR}:$PATH"
 
+COPY assets/entrypoint/platform.sh /entrypoint.sh
 COPY ./assets/tasks/taskfile.platform.yaml /home/${USERNAME}/taskfile.yaml
 
 RUN task build-utils
 
-# Final image
-FROM scratch AS platform_toolkit
-ARG USERNAME
-ARG LOCAL_BIN_DIR
-
-COPY --from=platform_toolkit_build / /
-COPY assets/entrypoint/platform.sh /entrypoint.sh
-
-USER ${USERNAME}
-WORKDIR /home/${USERNAME}
-ENV PATH="${LOCAL_BIN_DIR}:$PATH"
 ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["/bin/pause"]
 
