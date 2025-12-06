@@ -65,6 +65,15 @@ tasks:
 
   ensure-mise:
     internal: true
+    vars:
+      REQUIRED_TOOLS:
+        - curl
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
     cmds:
       - cmd: curl https://mise.run | MISE_INSTALL_PATH={{.LOCAL_BIN_DIR}}/mise sh
       - cmd: echo 'eval "$(~/.local/bin/mise activate)"' > .profile
@@ -73,6 +82,16 @@ tasks:
 
   ensure-devbox:
     internal: true
+    vars:
+      REQUIRED_TOOLS:
+        - curl
+        - bash
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
     cmds:
       - cmd: curl -fsSL https://get.jetify.com/devbox | bash -s -- -f
       - cmd: curl -fsSL https://nixos.org/nix/install | bash -s -- --no-daemon
@@ -81,6 +100,15 @@ tasks:
 
   ensure-chezmoi:
     internal: true
+    vars:
+      REQUIRED_TOOLS:
+        - mise
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
     cmds:
       - cmd: mise use --global chezmoi@latest
     status:
@@ -98,9 +126,7 @@ tasks:
         vars:
           TOOL: "{{.TOOL}}"
     cmds:
-      - cmd: |
-          PATH="${HOME}/.nix-profile/bin:${HOME}/.devbox/nix/profile/default/bin:${PATH}"
-          devbox install
+      - cmd: devbox global pull -f ${HOME}/devbox.json
     status:
       - sh -c "[ ! -f \"${HOME}/devbox.json\" ]"
 
