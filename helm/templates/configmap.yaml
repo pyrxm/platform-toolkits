@@ -6,12 +6,19 @@ metadata:
   labels:
     {{- include "helm.labels" . | nindent 4 }}
 data:
+  # Legacy asdf .tool-versions file (mise sort of supersedes this)
   {{- if .Values.config.platform.tool_versions }}
   .tool-versions: |
       {{- .Values.config.platform.tool_versions | nindent 4 }}
   {{- end }}
+  # Devbox devbox.json file
   {{- if .Values.config.platform.devbox_json }}
   devbox.json: |
       {{- .Values.config.platform.devbox_json | nindent 4 }}
+  {{- end }}
+  # Mise mise.toml file
+  {{- if .Values.config.platform.mise_toml }}
+  mise.toml: |
+      {{- .Values.config.platform.mise_toml | nindent 4 }}
   {{- end }}
 {{- end}}

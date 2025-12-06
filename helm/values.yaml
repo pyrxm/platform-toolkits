@@ -4,16 +4,22 @@ toolkit:
 
 config:
   mountPath: "/tmp"
+  chezmoiRepo: ""
   platform: {}
     # devbox_json: |
     #   {
     #       "packages": [
-    #           "go@1.20"
+    #           "go@1.20",
+    #           "python@3.11"
     #       ]
     #   }
     # tool_versions: |
     #   terraform 1.5.9
     #   kubectl 1.27.13
+    # mise_toml: |
+    #  [tools]
+    #  ansible = "latest"
+    #  uv = "latest"
 
 image:
   repository: ghcr.io/pyrxm
@@ -25,9 +31,8 @@ exec:
   command: ["/bin/pause"]
   args: []
 ## For "platform" toolkit, try:
-  # command: ["/entrypoint.sh"]
-  # args: ["/bin/pause"]
-
+# command: ["/entrypoint.sh"]
+# args: ["/bin/pause"]
 
 imagePullSecrets: []
 nameOverride: ""
