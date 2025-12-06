@@ -1,9 +1,11 @@
-ARG ALPINE_VERSION="3.22"
-ARG GOLANG_VERSION="1.24"
+ARG ALPINE_VERSION="3.23"
+ARG FEDORA_VERSION="43"
+ARG GOLANG_VERSION="1.25"
 ARG DEFAULT_SHELL="zsh"
 ARG NON_ROOT=true
 ARG USERNAME="engineer"
-ARG MICROSOCKS_VERSION="98421a21c4adc4c77c0cf3a5d650cc28ad3e0107" # use "master" for latest
+ARG MICROSOCKS_VERSION="v1.0.5" # use "master" for latest
+ARG LOCAL_BIN_DIR="/home/${USERNAME}/.local/bin"
 
 
 
@@ -24,19 +26,39 @@ COPY --from=dep_base_image_pause /pause /bin/pause
 
 RUN apk update --no-cache && \
     apk add --no-cache \
-        busybox-extras \
-        ${DEFAULT_SHELL} && \
+    busybox-extras \
+    ${DEFAULT_SHELL} && \
     # Install git if default shell is zsh for oh-my-zsh
     if [ "${DEFAULT_SHELL}" = "zsh" ] ; then \
-        apk add --no-cache git ; \
+    apk add --no-cache git ; \
     fi
 
 RUN if [ "${NON_ROOT}" = "true" ] ; then \
-        adduser -D ${USERNAME}; \
+    adduser -D ${USERNAME}; \
     else \
-        ln -s "${HOME}" /home/${USERNAME}; \
+    ln -s "${HOME}" /home/${USERNAME}; \
     fi
 
+FROM fedora:${FEDORA_VERSION} AS base_image_fedora
+ARG DEFAULT_SHELL
+ARG USERNAME
+ARG NON_ROOT
+
+COPY --from=dep_base_image_pause /pause /bin/pause
+
+RUN dnf update -y && \
+    dnf install -y \
+    git \
+    curl \
+    ${DEFAULT_SHELL} && \
+    dnf clean all && \
+    chmod 0640 /etc/shadow # PAM gets cranky otherwise
+
+RUN if [ "${NON_ROOT}" = "true" ] ; then \
+    useradd -m ${USERNAME} -s "$(command -v ${DEFAULT_SHELL})" ; \
+    else \
+    ln -s "${HOME}" /home/${USERNAME}; \
+    fi
 
 
 ## -------
@@ -51,12 +73,12 @@ WORKDIR /tmp
 ADD https://github.com/rofl0r/microsocks/archive/${MICROSOCKS_VERSION}.tar.gz /tmp/microsocks.tar.gz
 
 RUN \
-  echo "Installing build dependencies..." && \
-  apk add --update --no-cache \
+    echo "Installing build dependencies..." && \
+    apk add --update --no-cache \
     git \
     build-base \
     tar && \
-  echo "Building MicroSocks..." && \
+    echo "Building MicroSocks..." && \
     tar -xvf microsocks.tar.gz --strip 1 && \
     make && \
     chmod +x /tmp/microsocks && \
@@ -78,38 +100,38 @@ COPY --from=dep_network_toolkit_q /usr/bin/q /bin/q
 
 RUN apk update --no-cache && \
     apk add --no-cache \
-        apache2-utils \
-        bash \
-        bind-tools \
-        busybox-extras \
-        curl \
-        ethtool \
-        gping \
-        iperf3 \
-        iproute2 \
-        iputils \
-        lftp \
-        mtr \
-        net-tools \
-        netcat-openbsd \
-        nmap \
-        nmap-scripts \
-        openssh-client \
-        openssl \
-        perl-net-telnet \
-        procps \
-        rsync \
-        socat \
-        sudo \
-        tcpdump \
-        tcptraceroute \
-        tshark \
-        wget \
-        xh
+    apache2-utils \
+    bash \
+    bind-tools \
+    busybox-extras \
+    curl \
+    ethtool \
+    gping \
+    iperf3 \
+    iproute2 \
+    iputils \
+    lftp \
+    mtr \
+    net-tools \
+    netcat-openbsd \
+    nmap \
+    nmap-scripts \
+    openssh-client \
+    openssl \
+    perl-net-telnet \
+    procps \
+    rsync \
+    socat \
+    sudo \
+    tcpdump \
+    tcptraceroute \
+    tshark \
+    wget \
+    xh
 
 RUN if [ "${NON_ROOT}" = "true" ] ; then \
-        # Yes, I know... bad practice
-        echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
+    # Yes, I know... bad practice
+    echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
     fi
 
 # Final image
@@ -136,7 +158,7 @@ COPY --from=dep_network_toolkit_microsocks /usr/local/bin/microsocks /bin/micros
 # TODO: investigate how to add mitmproxy
 RUN apk update --no-cache && \
     apk add --no-cache \
-        python3
+    python3
 
 # Final image
 FROM scratch AS proxy_toolkit
@@ -155,75 +177,31 @@ CMD ["/bin/microsocks"]
 # PLATFORM TOOLKIT
 ## -------
 
-# Dependencies
-FROM golang:${GOLANG_VERSION}-alpine AS dep_platform_toolkit_asdf
-ENV GOPATH="/go"
-
-RUN test -d /go || mkdir /go
-RUN apk update --no-cache && \
-    apk add --no-cache \
-        bash \
-        git
-
-RUN git clone https://github.com/asdf-vm/asdf.git /tmp/asdf
-
-WORKDIR /tmp/asdf
-
-RUN go install github.com/asdf-vm/asdf/cmd/asdf@$(git ls-remote --tags --sort=committerdate | grep -o 'v.*' | tail -1)
-
-
 # Platform Toolkit Builder
-FROM alpine:${ALPINE_VERSION} AS platform_toolkit_build
+FROM fedora:${FEDORA_VERSION} AS platform_toolkit
 ARG DEFAULT_SHELL
 ARG USERNAME
 ARG NON_ROOT
+ARG LOCAL_BIN_DIR
 
-COPY --from=base_image / /
-COPY --from=dep_platform_toolkit_asdf /go/bin/asdf /usr/bin/asdf
-
-RUN apk update --no-cache && \
-    apk add --no-cache \
-        bash \
-        bind-tools \
-        coreutils \
-        curl \
-        git \
-        net-tools \
-        netcat-openbsd \
-        sudo \
-        shadow \
-        xz
+COPY --from=base_image_fedora / /
 
 RUN if [ "${NON_ROOT}" = "true" ] ; then \
-        # Yes, I know... bad practice
-        echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
-        install -d -m755 -o 1000 -g 1000 /nix ; \
+    # Yes, I know... bad practice
+    echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
     fi
+
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/bin
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
+ENV PATH="${LOCAL_BIN_DIR}:$PATH"
 
-RUN curl -fsSL https://get.jetify.com/devbox | bash -s -- -f && \
-    curl -fsSL https://nixos.org/nix/install | bash -s -- --no-daemon
+COPY assets/entrypoint/platform.sh /entrypoint.sh
+COPY ./assets/tasks/taskfile.platform.yaml /home/${USERNAME}/taskfile.yaml
 
-RUN if [ "${DEFAULT_SHELL}" = "zsh" ] ; then \
-        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" ; \
-        sed -i 's/plugins=(git)/plugins=(asdf git)/' "${HOME}/.zshrc" ; \
-        echo 'export PATH=$HOME/.nix-profile/bin:$HOME/.devbox/nix/profile/default/bin:$PATH' >> "${HOME}/.zshrc" ; \
-    else \
-        echo 'export ASDF_DIR="$HOME/.asdf"' >> "${HOME}/.profile" ; \
-        echo '. "$ASDF_DIR/asdf.sh"' >> "${HOME}/.profile" ; \
-        echo 'export PATH=$HOME/.nix-profile/bin:$HOME/.devbox/nix/profile/default/bin:$PATH' >> "${HOME}/.profile" ; \
-    fi
+RUN task build-utils
 
-# Final image
-FROM scratch AS platform_toolkit
-ARG USERNAME
-COPY --from=platform_toolkit_build / /
-COPY entrypoint/platform.sh /entrypoint.sh
-
-USER ${USERNAME}
-WORKDIR /home/${USERNAME}
 ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["/bin/pause"]
 
@@ -239,13 +217,13 @@ COPY --from=base_image / /
 
 RUN apk update --no-cache && \
     apk add --no-cache \
-        bind-tools \
-        curl \
-        mysql-client \
-        net-tools \
-        netcat-openbsd \
-        postgresql-client \
-        redis
+    bind-tools \
+    curl \
+    mysql-client \
+    net-tools \
+    netcat-openbsd \
+    postgresql-client \
+    redis
 
 # Final image
 FROM scratch AS data_toolkit

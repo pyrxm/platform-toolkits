@@ -49,6 +49,8 @@ spec:
           env:
             - name: PLATFORM_TOOLKIT_CONFIG_PATH
               value: "{{ .Values.config.mountPath }}"
+            - name: PLATFORM_TOOLKIT_CHEZMOI_REPO
+              value: "{{ .Values.config.chezmoiRepo }}"
           volumeMounts:
             - name: config-volume
               mountPath: {{ .Values.config.mountPath }}
