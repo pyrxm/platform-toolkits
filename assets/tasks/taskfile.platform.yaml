@@ -1,3 +1,4 @@
+---
 version: "3"
 
 vars:
@@ -154,12 +155,43 @@ tasks:
         - git
         - ssh
     deps:
+      - task: ensure-run-omz-env
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
         silent: true
         vars:
           TOOL: "{{.TOOL}}"
     cmds:
-      - cmd: chezmoi init --apply "${PLATFORM_TOOLKIT_CHEZMOI_REPO}"
+      - cmd: |
+          if [ ! -d "$(chezmoi source-path)" ] ; then
+            chezmoi init --apply "${PLATFORM_TOOLKIT_CHEZMOI_REPO}"
+          else
+            chezmoi apply
+          fi
     status:
       - sh -c "[ -z \"${PLATFORM_TOOLKIT_CHEZMOI_REPO}\" ]"
+
+  ensure-run-omz-env:
+    internal: true
+    vars:
+      REQUIRED_TOOLS:
+        - git
+        - ssh
+        - zsh
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
+    cmds:
+      - cmd: |
+          if [ ! -d "${HOME}/.oh-my-zsh" ] ; then
+            export OVERWRITE_CONFIRMATION="no"
+            export RUNZSH="no"
+            sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+          else
+            zsh -c "${HOME}/.oh-my-zsh/tools/upgrade.sh"
+          fi
+    status:
+      - sh -c "[ \"${PLATFORM_TOOLKIT_INSTALL_OMZ:-false}\" == \"false\" ]"
