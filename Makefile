@@ -57,11 +57,10 @@ run-platform: image-platform
 .PHONY: test-platform
 test-platform: image-platform
 	$(IMAGE_BUILDER) run --rm -it \
-        -e "PLATFORM_TOOLKIT_CHEZMOI_REPO=/tmp/dotfiles" \
+        -e "PLATFORM_TOOLKIT_CHEZMOI_REPO=https://gist.github.com/f7c2e4748b80e311e2fd0d6d31fb866b.git" \
 	    -e "PLATFORM_TOOLKIT_INSTALL_OMZ=true" \
 		-v "$(shell pwd)/tests/devbox.json:/tmp/devbox.json:ro" \
 		-v "$(shell pwd)/tests/mise.toml:/tmp/mise.toml:ro" \
-		-v "$(shell pwd)/tests/dotfiles:/tmp/dotfiles:ro" \
 		$(INTERNAL_REG)/$(IMAGE_PLATFORM_TOOLKIT):$(INTERNAL_TAG) zsh
 
 .PHONY: image-data
