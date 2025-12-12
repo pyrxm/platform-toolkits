@@ -51,7 +51,18 @@ image-platform:
 
 .PHONY: run-platform
 run-platform: image-platform
-	$(IMAGE_BUILDER) run --rm -it $(INTERNAL_REG)/$(IMAGE_PLATFORM_TOOLKIT):$(INTERNAL_TAG) zsh
+	$(IMAGE_BUILDER) run --rm -it \
+		$(INTERNAL_REG)/$(IMAGE_PLATFORM_TOOLKIT):$(INTERNAL_TAG) zsh
+
+.PHONY: test-platform
+test-platform: image-platform
+	$(IMAGE_BUILDER) run --rm -it \
+        -e "PLATFORM_TOOLKIT_CHEZMOI_REPO=/tmp/dotfiles" \
+	    -e "PLATFORM_TOOLKIT_INSTALL_OMZ=true" \
+		-v "$(shell pwd)/tests/devbox.json:/tmp/devbox.json:ro" \
+		-v "$(shell pwd)/tests/mise.toml:/tmp/mise.toml:ro" \
+		-v "$(shell pwd)/tests/dotfiles:/tmp/dotfiles:ro" \
+		$(INTERNAL_REG)/$(IMAGE_PLATFORM_TOOLKIT):$(INTERNAL_TAG) zsh
 
 .PHONY: image-data
 image-data:
