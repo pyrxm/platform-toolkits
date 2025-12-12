@@ -1,0 +1,6 @@
+[tools]
+atuin = "latest"
+starship = "latest"
+eza = "latest"
+zellij = "latest"
+bat = "latest"
