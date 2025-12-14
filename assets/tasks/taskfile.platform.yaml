@@ -31,6 +31,7 @@ tasks:
     cmds:
       - task: ensure-local-bin
       - task: ensure-mise
+      - task: ensure-soar
       - task: ensure-chezmoi
       - task: ensure-devbox
 
@@ -77,9 +78,26 @@ tasks:
           TOOL: "{{.TOOL}}"
     cmds:
       - cmd: curl https://mise.run | MISE_INSTALL_PATH={{.LOCAL_BIN_DIR}}/mise sh
-      - cmd: echo 'eval "$(~/.local/bin/mise activate)"' > .profile
+      - cmd: echo 'eval "$(~/.local/bin/mise activate)"' > ${HOME}/.profile
     status:
       - test -f {{.LOCAL_BIN_DIR}}/mise
+
+  ensure-soar:
+    internal: true
+    vars:
+      REQUIRED_TOOLS:
+        - curl
+    deps:
+      - for: { var: REQUIRED_TOOLS, as: TOOL }
+        task: check-required-tool
+        silent: true
+        vars:
+          TOOL: "{{.TOOL}}"
+    cmds:
+      - cmd: curl -fsSL https://soar.qaidvoid.dev/install.sh | sh
+      - cmd: echo 'PATH="${HOME}/.local/share/soar/bin:${PATH}"' >> ${HOME}/.profile
+    status:
+      - command -v soar
 
   ensure-devbox:
     internal: true
