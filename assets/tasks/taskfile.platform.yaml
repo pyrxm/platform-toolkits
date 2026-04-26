@@ -61,7 +61,8 @@ tasks:
     internal: true
     cmds:
       - cmd: mkdir -p {{.LOCAL_BIN_DIR}}
-      - cmd: echo 'PATH="{{.LOCAL_BIN_DIR}}:${PATH}"' > ${HOME}/.profile
+      - cmd: echo 'PATH="{{.LOCAL_BIN_DIR}}:${PATH}"' >> ${HOME}/.profile
+      - cmd: echo 'PATH="{{.LOCAL_BIN_DIR}}:${PATH}"' >> ${HOME}/.zprofile
     status:
       - test -d {{.LOCAL_BIN_DIR}}
 
@@ -78,7 +79,8 @@ tasks:
           TOOL: "{{.TOOL}}"
     cmds:
       - cmd: curl https://mise.run | MISE_INSTALL_PATH={{.LOCAL_BIN_DIR}}/mise sh
-      - cmd: echo 'eval "$(~/.local/bin/mise activate)"' > ${HOME}/.profile
+      - cmd: echo 'eval "$(~/.local/bin/mise activate)"' >> ${HOME}/.profile
+      - cmd: echo 'eval "$(~/.local/bin/mise activate)"' >> ${HOME}/.zprofile
     status:
       - test -f {{.LOCAL_BIN_DIR}}/mise
 
@@ -96,6 +98,7 @@ tasks:
     cmds:
       - cmd: curl -fsSL https://soar.qaidvoid.dev/install.sh | sh
       - cmd: echo 'PATH="${HOME}/.local/share/soar/bin:${PATH}"' >> ${HOME}/.profile
+      - cmd: echo 'PATH="${HOME}/.local/share/soar/bin:${PATH}"' >> ${HOME}/.zprofile
     status:
       - command -v soar
 
