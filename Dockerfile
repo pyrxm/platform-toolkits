@@ -1,6 +1,6 @@
+ARG PAUSE_VERSION="3.10"
 ARG ALPINE_VERSION="3.23"
-ARG FEDORA_VERSION="43"
-ARG GOLANG_VERSION="1.25"
+ARG FEDORA_VERSION="44"
 ARG DEFAULT_SHELL="zsh"
 ARG NON_ROOT=true
 ARG USERNAME="engineer"
@@ -14,7 +14,7 @@ ARG LOCAL_BIN_DIR="/home/${USERNAME}/.local/bin"
 ## -------
 
 # Dependencies
-FROM registry.k8s.io/pause:3.10 AS dep_base_image_pause
+FROM registry.k8s.io/pause:${PAUSE_VERSION} AS dep_base_image_pause
 
 # Base image builder
 FROM alpine:${ALPINE_VERSION} AS base_image
