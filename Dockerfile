@@ -39,27 +39,6 @@ RUN if [ "${NON_ROOT}" = "true" ] ; then \
     ln -s "${HOME}" /home/${USERNAME}; \
     fi
 
-FROM fedora:${FEDORA_VERSION} AS base_image_fedora
-ARG DEFAULT_SHELL
-ARG USERNAME
-ARG NON_ROOT
-
-COPY --from=dep_base_image_pause /pause /bin/pause
-
-RUN dnf update -y && \
-    dnf install -y \
-    git \
-    curl \
-    ${DEFAULT_SHELL} && \
-    dnf clean all && \
-    chmod 0640 /etc/shadow # PAM gets cranky otherwise
-
-RUN if [ "${NON_ROOT}" = "true" ] ; then \
-    useradd -m ${USERNAME} -s "$(command -v ${DEFAULT_SHELL})" ; \
-    else \
-    ln -s "${HOME}" /home/${USERNAME}; \
-    fi
-
 
 ## -------
 # NETWORK TOOLKIT
@@ -184,11 +163,22 @@ ARG USERNAME
 ARG NON_ROOT
 ARG LOCAL_BIN_DIR
 
-COPY --from=base_image_fedora / /
+COPY --from=dep_base_image_pause /pause /bin/pause
+
+RUN dnf update -y && \
+    dnf install -y \
+    git \
+    curl \
+    ${DEFAULT_SHELL} && \
+    dnf clean all && \
+    chmod 0640 /etc/shadow # PAM gets cranky otherwise
 
 RUN if [ "${NON_ROOT}" = "true" ] ; then \
+    useradd -m ${USERNAME} -s "$(command -v ${DEFAULT_SHELL})" ; \
     # Yes, I know... bad practice
     echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/${USERNAME}-access ; \
+    else \
+    ln -s "${HOME}" /home/${USERNAME}; \
     fi
 
 RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/bin
