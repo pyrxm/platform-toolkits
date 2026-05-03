@@ -1,8 +1,7 @@
 ---
-
 name: Container Image Build and Push - CI Workflow
 
-'on':
+"on":
   workflow_run:
     workflows: ["Scheduled scan of container images for vulnerabilities"]
     types:
@@ -41,11 +40,11 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: localhost/${{ github.repository_owner }}/ptk-${{ matrix.target }}-toolkit:${{ github.sha }}
-          format: 'table'
-          exit-code: '1'
+          format: "table"
+          exit-code: "1"
           ignore-unfixed: true
-          vuln-type: 'os'
-          severity: 'CRITICAL,HIGH'
+          vuln-type: "os"
+          severity: "CRITICAL,HIGH"
 
   build-and-push-image:
     name: build and push multi-arch container image
@@ -115,7 +114,7 @@ jobs:
         uses: bsord/helm-push@v4.1.0
         with:
           useOCIRegistry: true
-          registry-url:  oci://ghcr.io/${{ github.repository_owner }}
+          registry-url: oci://ghcr.io/${{ github.repository_owner }}
           username: ${{ github.actor }}
           access-token: ${{ secrets.GITHUB_TOKEN }}
           force: true
