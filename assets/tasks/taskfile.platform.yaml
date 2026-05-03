@@ -1,8 +1,13 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
 ---
 version: "3"
 
 vars:
   LOCAL_BIN_DIR: "${HOME}/.local/bin"
+  SHELL_PROFILES:
+    - ".profile"
+    - ".bash_profile"
+    - ".zprofile"
 
 tasks:
   ##
@@ -18,10 +23,10 @@ tasks:
     desc: Build platform toolkit required utils
     vars:
       REQUIRED_TOOLS:
-        - sudo
-        - bash
-        - curl
-        - git
+        - "sudo"
+        - "bash"
+        - "curl"
+        - "git"
     deps:
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
@@ -38,6 +43,8 @@ tasks:
   build-env:
     desc: Build platform toolkit environment
     deps:
+      - task: ensure-run-link-config
+    cmds:
       - task: ensure-run-mise-env
       - task: ensure-run-devbox-env
       - task: ensure-run-chezmoi-env
@@ -61,8 +68,8 @@ tasks:
     internal: true
     cmds:
       - cmd: mkdir -p {{.LOCAL_BIN_DIR}}
-      - cmd: echo 'PATH="{{.LOCAL_BIN_DIR}}:${PATH}"' >> ${HOME}/.profile
-      - cmd: echo 'PATH="{{.LOCAL_BIN_DIR}}:${PATH}"' >> ${HOME}/.zprofile
+      - for: { var: SHELL_PROFILES, as: PROFILE }
+        cmd: echo 'PATH="{{.LOCAL_BIN_DIR}}:${PATH}"' >> ${HOME}/{{.PROFILE}}
     status:
       - test -d {{.LOCAL_BIN_DIR}}
 
@@ -70,7 +77,7 @@ tasks:
     internal: true
     vars:
       REQUIRED_TOOLS:
-        - curl
+        - "curl"
     deps:
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
@@ -79,8 +86,8 @@ tasks:
           TOOL: "{{.TOOL}}"
     cmds:
       - cmd: curl https://mise.run | MISE_INSTALL_PATH={{.LOCAL_BIN_DIR}}/mise sh
-      - cmd: echo 'eval "$(~/.local/bin/mise activate)"' >> ${HOME}/.profile
-      - cmd: echo 'eval "$(~/.local/bin/mise activate)"' >> ${HOME}/.zprofile
+      - for: { var: SHELL_PROFILES, as: PROFILE }
+        cmd: echo 'eval "$(~/.local/bin/mise activate)"' >> ${HOME}/{{.PROFILE}}
     status:
       - test -f {{.LOCAL_BIN_DIR}}/mise
 
@@ -88,7 +95,7 @@ tasks:
     internal: true
     vars:
       REQUIRED_TOOLS:
-        - curl
+        - "curl"
     deps:
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
@@ -97,8 +104,8 @@ tasks:
           TOOL: "{{.TOOL}}"
     cmds:
       - cmd: curl -fsSL https://soar.qaidvoid.dev/install.sh | sh
-      - cmd: echo 'PATH="${HOME}/.local/share/soar/bin:${PATH}"' >> ${HOME}/.profile
-      - cmd: echo 'PATH="${HOME}/.local/share/soar/bin:${PATH}"' >> ${HOME}/.zprofile
+      - for: { var: SHELL_PROFILES, as: PROFILE }
+        cmd: echo 'PATH="${HOME}/.local/share/soar/bin:${PATH}"' >> ${HOME}/{{.PROFILE}}
     status:
       - command -v soar
 
@@ -106,8 +113,8 @@ tasks:
     internal: true
     vars:
       REQUIRED_TOOLS:
-        - curl
-        - bash
+        - "curl"
+        - "bash"
     deps:
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
@@ -124,7 +131,7 @@ tasks:
     internal: true
     vars:
       REQUIRED_TOOLS:
-        - mise
+        - "mise"
     deps:
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
@@ -140,7 +147,7 @@ tasks:
     internal: true
     vars:
       REQUIRED_TOOLS:
-        - devbox
+        - "devbox"
     deps:
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
@@ -156,7 +163,7 @@ tasks:
     internal: true
     vars:
       REQUIRED_TOOLS:
-        - mise
+        - "mise"
     deps:
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
@@ -172,9 +179,9 @@ tasks:
     internal: true
     vars:
       REQUIRED_TOOLS:
-        - chezmoi
-        - git
-        - ssh
+        - "chezmoi"
+        - "git"
+        - "ssh"
     deps:
       - task: ensure-run-omz-env
       - for: { var: REQUIRED_TOOLS, as: TOOL }
@@ -196,9 +203,9 @@ tasks:
     internal: true
     vars:
       REQUIRED_TOOLS:
-        - git
-        - ssh
-        - zsh
+        - "git"
+        - "ssh"
+        - "zsh"
     deps:
       - for: { var: REQUIRED_TOOLS, as: TOOL }
         task: check-required-tool
@@ -216,3 +223,28 @@ tasks:
           fi
     status:
       - sh -c "[ \"${PLATFORM_TOOLKIT_INSTALL_OMZ:-false}\" == \"false\" ]"
+
+  ensure-run-link-config:
+    internal: true
+    vars:
+      PTK_CONFIG: "${PLATFORM_TOOLKIT_CONFIG_PATH:-/tmp}"
+      PTK_INIT: "${PTK_INIT:-${HOME}/.ptk-init}"
+      CONFIG_FILES:
+        - "devbox.json"
+        - "devbox.lock"
+        - ".config/mise.toml"
+        - ".tool-versions"
+      CONFIG_DIRS:
+        - ".config"
+    cmds:
+      - for: { var: CONFIG_DIRS, as: CDIR }
+        cmd: |
+          [ -d "${HOME}/${CDIR}" ] || mkdir -p "${HOME}/{{.CDIR}}"
+      - for: { var: CONFIG_FILES, as: CFILE }
+        cmd: |
+          if [ -f "{{.PTK_CONFIG}}/$(basename "{{.CFILE}}")" ] && [ ! -e "${HOME}/{{.CFILE}}" ] ; then
+              ln -s "{{.PTK_CONFIG}}/$(basename "{{.CFILE}}")" "${HOME}/{{.CFILE}}"
+          fi
+      - cmd: touch "{{.PTK_INIT}}"
+    status:
+      - test -f "{{.PTK_INIT}}"
