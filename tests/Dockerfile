@@ -8,7 +8,8 @@ FROM ${BASE_IMAGE} AS custom_toolkit
 # Set an "out of the way" location for placing devbox.json, mise.toml, etc.
 # The image will automatically pick up the files from here and configure your
 # environment.
-ENV PLATFORM_TOOLKIT_CONFIG_PATH="/tools"
+ENV PLATFORM_TOOLKIT_INSTALL_OMZ=true
+ENV PLATFORM_TOOLKIT_CONFIG_PATH="/.tools"
 COPY . "${PLATFORM_TOOLKIT_CONFIG_PATH}"
 
 # Running the entrypoint script during build will install all your tools,
