@@ -120,7 +120,7 @@ COPY --from=network_toolkit_build / /
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-CMD ["/bin/pause"]
+CMD [ "/bin/pause" ]
 
 
 
@@ -148,7 +148,7 @@ EXPOSE 1080
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-CMD ["/bin/microsocks"]
+CMD [ "/bin/microsocks" ]
 
 
 
@@ -193,7 +193,7 @@ COPY ./assets/tasks/taskfile.platform.yaml /home/${USERNAME}/taskfile.yaml
 RUN task build-utils
 
 ENTRYPOINT [ "/entrypoint.sh" ]
-CMD ["/bin/pause"]
+CMD [ "/bin/pause" ]
 
 
 
@@ -222,4 +222,4 @@ COPY --from=data_toolkit_build / /
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-CMD ["/bin/pause"]
+CMD [ "/bin/pause" ]
