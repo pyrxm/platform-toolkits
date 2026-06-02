@@ -124,6 +124,8 @@ tasks:
     cmds:
       - cmd: curl -fsSL https://get.jetify.com/devbox | bash -s -- -f
       - cmd: curl -fsSL https://nixos.org/nix/install | bash -s -- --no-daemon
+      - for: { var: SHELL_PROFILES, as: PROFILE }
+        cmd: echo 'eval "$(devbox global shellenv)"' >> ${HOME}/{{.PROFILE}}
     status:
       - command -v devbox
 
